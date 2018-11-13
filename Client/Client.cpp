@@ -7,6 +7,7 @@
 #include <string>
 #include <sstream>
 #include <WS2tcpip.h>
+#include "cmd-interface.h"
 #pragma comment(lib, "ws2_32.lib")
 #pragma warning(disable:4996)
 using namespace std;
@@ -65,18 +66,21 @@ int recv_msg(string &output) {
 	ZeroMemory(type, 5);
 	ZeroMemory(size, 9);
 	if (check_error(recv(sock, type, 4, 0))) {
-		string ss = type;
-		cout << endl << "Got type: \"" << ss << "\"" << endl;
-		if (ss == "TEXT") {
+		string recv_type = type;
+		cout << endl << "Got type: \"" << recv_type << "\"" << endl;
+		if (recv_type == "TEXT") {
 			if (check_error(recv(sock, size, 8, 0))) {
 				alloc_size = atoi(size);
-				cout << "Got size: (" << alloc_size << ")" << endl;
+				cout << "Got size: (" << alloc_size << "):" << size << endl;
 				char *input = new char[alloc_size];
 				if (check_error(recv(sock, input, alloc_size, 0))) {
 					input[alloc_size] = '\0';
 					string output = input;
 					cout << "Got text: \"" << output << "\"" << endl << endl;
-					send_msg("RECV-OK");
+					if (!(output.empty())) {
+						send_msg("RECV-OK");
+					}
+					
 				}
 				else {
 					return -1;
@@ -86,8 +90,47 @@ int recv_msg(string &output) {
 				return -2;
 			}
 		}
-		else {
-			return -3;
+		else if(recv_type == "SRTU"){
+			if (check_error(recv(sock, size, 8, 0))) {
+				alloc_size = atoi(size);
+				cout << "Got size: (" << alloc_size << "):" << size << endl;
+				char *input = new char[alloc_size];
+				if (check_error(recv(sock, input, alloc_size, 0))) {
+					input[alloc_size] = '\0';
+					string output = input;
+					cout << "Got WelcomeMSG: \"" << output << "\"" << endl << endl;
+					send_msg("START-OK");
+				}
+				else {
+					return -1;
+				}
+			}
+			else {
+				return -2;
+			}
+		}
+		else if (recv_type == "CMDA") { // send over each part of read_cmd when normal cout happens send to server with PART header
+			if (check_error(recv(sock, size, 8, 0))) {
+				alloc_size = atoi(size);
+				cout << "Got size: (" << alloc_size << "):" << size << endl;
+				char *input = new char[alloc_size];
+				if (check_error(recv(sock, input, alloc_size, 0))) {
+					input[alloc_size] = '\0';
+					string output = input;
+					cout << "Got Command: \"" << output << "\"" << endl << endl;
+					cmd inter(CommandPrompt);
+					string outputer;
+					inter.command(output, outputer);
+					inter.endme();
+					send_msg(outputer);
+				}
+				else {
+					return -1;
+				}
+			}
+			else {
+				return -2;
+			}
 		}
 	}
 	else {
@@ -101,7 +144,7 @@ bool send_msg(string input) {
 	stringstream ss;
 	ss << string(8 - padding, '0') << msg_size;
 	string data_size = ss.str();
-	string type = "TEXT";
+	string type = "RESP";
 	string data = input;
 	if (!(check_error(send(sock, type.c_str(), type.size(), 0)) && check_error(send(sock, data_size.c_str(), data_size.size(), 0)) && check_error(send(sock, data.c_str(), data.size(), 0)))) {
 		return false;
