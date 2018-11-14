@@ -7,7 +7,7 @@ int main()
 	default_client.connect_socket();
 	while (default_client.get_alive()) {
 		cout << default_client.get_alive() << endl;
-		string output = "commit die plz";
+		string output = "commit plz";
 		default_client.recv_data(output);
 		default_client.endme();
 	}
