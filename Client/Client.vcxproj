@@ -151,12 +151,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="client-interface.h" />
     <ClInclude Include="cmd-interface.h" />
     <ClInclude Include="memory-lib.h" />
     <ClInclude Include="nirsoft-cmd.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="client-interface.cpp" />
     <ClCompile Include="Client.cpp" />
     <ClCompile Include="cmd-interface.cpp" />
     <ClCompile Include="memory-lib.cpp" />
