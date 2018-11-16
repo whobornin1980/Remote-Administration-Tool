@@ -23,11 +23,16 @@ string client::hostname2ip(string host)
 	else {
 		return "E.R.R.O.R";
 	}
-
 }
 
 void client::data_parser(string type, int size, string command)
 {
+	if (type == "TEXT") {
+	}
+	else if (type == "") {
+	}
+	else if (type == "") {
+	}
 }
 
 bool client::startup_socket(string ip_address, int port, WSADATA & wsa_data, WORD & version, SOCKET & active, sockaddr_in & socket_hint)
@@ -111,7 +116,7 @@ bool client::send_data(string data, string header)
 
 bool client::recv_data(string & output)
 {
-	char type[5]; // 4 + 1('\0') 
+	char type[5]; // 4 + 1('\0')
 	char size[9]; // 8 + 1('\0')
 	int alloc_size;
 	ZeroMemory(type, 5);
@@ -129,9 +134,8 @@ bool client::recv_data(string & output)
 					string output = input;
 					cout << "Got text: \"" << output << "\"" << endl << endl;
 					if (!(output.empty())) {
-						send_data("RECV-OK");
+						//send_data("RECV-OK");
 					}
-
 				}
 				else {
 					return -1;
@@ -150,7 +154,7 @@ bool client::recv_data(string & output)
 					input[alloc_size] = '\0';
 					string output = input;
 					cout << "Got WelcomeMSG: \"" << output << "\"" << endl << endl;
-					send_data("START-OK");
+					//send_data("START-OK");
 				}
 				else {
 					return -1;
@@ -169,7 +173,7 @@ bool client::recv_data(string & output)
 					input[alloc_size] = '\0';
 					string output = input;
 					cout << "Got Command: \"" << output << "\"" << endl << endl;
-					send_data(output);
+					//send_data(output);
 				}
 				else {
 					return -1;
