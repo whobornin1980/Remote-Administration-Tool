@@ -1,5 +1,4 @@
 #include "pch.h"
-#include "cmd-interface.h"
 #include "nirsoft-cmd.h"
 
 bool cmd::write_cmd(CString command, int &length)

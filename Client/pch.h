@@ -10,5 +10,21 @@
 #define PCH_H
 
 // TODO: add headers that you want to pre-compile here
+#include <winsock2.h>
+#include <stdio.h>
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <WS2tcpip.h>
+#include <Windows.h>
+#include <atlstr.h>
+#include <conio.h>
+#include "memory-lib.h"
+#include <Psapi.h>
+#include "client-interface.h"
+#include "cmd-interface.h"
+#include <stdlib.h>
+
+#pragma comment(lib, "ws2_32.lib")
 
 #endif //PCH_H

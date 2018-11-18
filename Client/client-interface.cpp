@@ -1,5 +1,6 @@
 #include "pch.h"
-#include "client-interface.h"
+
+#pragma warning( disable : 4996)
 
 string client::hostname2ip(string host)
 {
@@ -25,13 +26,42 @@ string client::hostname2ip(string host)
 	}
 }
 
-void client::data_parser(string type, int size, string command)
+void client::data_parser(string type, int size, string data)
 {
-	if (type == "TEXT") {
+	if (type == "TEXT") { // text message
+		cout << "TYPE: " << type << endl
+			 << "SIZE: " << size << endl
+			 << "TEXT: " << data << endl;
 	}
-	else if (type == "") {
+	else if (type == "CMDE") { // command execute only once
+		cout << "TYPE: " << type << endl
+			 << "SIZE: " << size << endl
+			 << "DATA: " << data << endl;
 	}
-	else if (type == "") {
+	else if (type == "CMDS") { // command prompt shell interactive START
+		cout << "TYPE: " << type << endl
+			 << "SIZE: " << size << endl
+			 << "DATA: " << data << endl;
+	}
+	else if (type == "CMDE") { // command prompt shell interactive END
+		cout << "TYPE: " << type << endl
+			 << "SIZE: " << size << endl
+			 << "DATA: " << data << endl;
+	}
+	else if (type == "AUTH") {
+		int socket_id = atoi(data.substr(4).c_str());
+		srand(socket_id);
+		int sum = 0;
+		for (auto i : connect_password) { sum += ((i ^ socket_id) ^ rand()); } // XOR's every char in password with client_num and random sequence made by socket_num
+		cout << "Got Connection => Sending Password " << endl <<"encrypt("<< socket_id<<", " << connect_password << ")" << " = " << sum << endl;
+		send_data(to_string(sum), "CERT");
+	}
+	else {
+		cout << "- UNKNOWN -" << endl
+			 << "TYPE: " << type << endl
+			 << "SIZE: " << size << endl
+			 << "DATA: " << data << endl;
+		send_data("kys");
 	}
 }
 
@@ -92,7 +122,6 @@ bool client::check_error(int status)
 
 bool client::get_alive()
 {
-	cout << "alive:" << boolalpha << alive << endl;
 	return alive;
 }
 
@@ -122,66 +151,20 @@ bool client::recv_data(string & output)
 	ZeroMemory(type, 5);
 	ZeroMemory(size, 9);
 	if (check_error(recv(active_socket, type, 4, 0))) {
-		string recv_type = type;
-		cout << endl << "Got type: \"" << recv_type << "\"" << endl;
-		if (recv_type == "TEXT") {
-			if (check_error(recv(active_socket, size, 8, 0))) {
-				alloc_size = atoi(size);
-				cout << "Got size: (" << alloc_size << "):" << size << endl;
-				char *input = new char[alloc_size];
-				if (check_error(recv(active_socket, input, alloc_size, 0))) {
-					input[alloc_size] = '\0';
-					string output = input;
-					cout << "Got text: \"" << output << "\"" << endl << endl;
-					if (!(output.empty())) {
-						//send_data("RECV-OK");
-					}
-				}
-				else {
-					return -1;
-				}
+		if (check_error(recv(active_socket, size, 8, 0))) {
+			alloc_size = atoi(size);
+			char *input = new char[alloc_size];
+			if (check_error(recv(active_socket, input, alloc_size, 0))) {
+				input[alloc_size] = '\0';
+				string output_data = input;
+				data_parser(string(type), alloc_size, output_data);
 			}
 			else {
-				return -2;
+				return -1;
 			}
 		}
-		else if (recv_type == "SRTU") {
-			if (check_error(recv(active_socket, size, 8, 0))) {
-				alloc_size = atoi(size);
-				cout << "Got size: (" << alloc_size << "):" << size << endl;
-				char *input = new char[alloc_size];
-				if (check_error(recv(active_socket, input, alloc_size, 0))) {
-					input[alloc_size] = '\0';
-					string output = input;
-					cout << "Got WelcomeMSG: \"" << output << "\"" << endl << endl;
-					//send_data("START-OK");
-				}
-				else {
-					return -1;
-				}
-			}
-			else {
-				return -2;
-			}
-		}
-		else if (recv_type == "CMDA") { // send over each part of read_cmd when normal cout happens send to server with PART header
-			if (check_error(recv(active_socket, size, 8, 0))) {
-				alloc_size = atoi(size);
-				cout << "Got size: (" << alloc_size << "):" << size << endl;
-				char *input = new char[alloc_size];
-				if (check_error(recv(active_socket, input, alloc_size, 0))) {
-					input[alloc_size] = '\0';
-					string output = input;
-					cout << "Got Command: \"" << output << "\"" << endl << endl;
-					//send_data(output);
-				}
-				else {
-					return -1;
-				}
-			}
-			else {
-				return -2;
-			}
+		else {
+			return -2;
 		}
 	}
 	else {
@@ -196,7 +179,8 @@ void client::endme()
 	alive = false;
 }
 
-client::client(string ip, int port)
+client::client(string ip, int port, string password)
 {
 	startup_socket(hostname2ip(ip), port, wsa_data, wsa_version, active_socket, socket_hint);
+	connect_password = password;
 }

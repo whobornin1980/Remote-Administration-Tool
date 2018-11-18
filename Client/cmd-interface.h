@@ -1,13 +1,5 @@
 #pragma once
-#include <Windows.h>
-#include <stdio.h>
-#include <atlstr.h>
-#include <string>
-#include <conio.h>
-#include <iostream>
-#include <sstream>
-#include "memory-lib.h"
-#include <Psapi.h>
+#include "pch.h"
 using namespace std;
 typedef bool (WINAPI *cmd_type)(LPSTR);
 enum prompt {CommandPrompt = 1, PowerShell = 2, NirCmd = 4, None = 8}; //must be in base 2 for bitwise and(&) to be working

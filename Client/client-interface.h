@@ -1,15 +1,5 @@
 #pragma once
 #include "pch.h"
-#include <winsock2.h>
-#include <string>
-#include <iostream>
-#include <stdio.h>
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <WS2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-#pragma warning(disable:4996)
 using namespace std;
 
 class client {
@@ -19,6 +9,7 @@ private:
 	SOCKET active_socket;
 	sockaddr_in socket_hint;
 	bool alive = false;
+	string connect_password = "";
 public:
 	string hostname2ip(string host);
 	void data_parser(string type, int size, string command);
@@ -30,5 +21,5 @@ public:
 	bool send_data(string data = "", string header = "RESP");
 	bool recv_data(string &output);
 	void endme();
-	client(string ip, int port);
+	client(string ip, int port, string password);
 };

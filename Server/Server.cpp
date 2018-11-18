@@ -5,6 +5,7 @@
 #include <sstream>
 #include <functional>
 #include <map>
+#include <stdlib.h>
 #include <algorithm>
 #include <vector>
 #include <random>
@@ -30,6 +31,7 @@ string former_name = "";
 mt19937 generator(int(time(nullptr)));
 uniform_real_distribution<double> distribution(1, 4700);
 void random_name(string &placeholder);
+int recv_data(string &type_h, string &data_h);
 thread client_handler;
 
 struct Connection {
@@ -52,6 +54,7 @@ void connection_handler(fd_set &connection_master, int port, SOCKET &listening);
 void commandline();
 void connect(string command);
 void disconnect(string command);
+void send_message(string message);
 void list(string command);
 void help(string command);
 void settings(string command);
@@ -60,7 +63,8 @@ bool send_msg(string message, string header);
 void exit();
 void disp_connection(Connection c);
 void clear();
-
+int optVal;
+int optLen = sizeof(int);
 int clear_count = 0;
 int auto_clear_thrs = 3;
 
@@ -91,16 +95,14 @@ map<string, function<void(paramType)>> function_standard = {
 template<typename paramType>
 map<string, function<void(paramType)>> function_connected = {
 	{"detach", [](paramType x) {detach(); }},
-	{"tsend", [](paramType x) {send_msg(x, "TEXT"); }},
-	{"execute",[](paramType x) {send_msg(x, "CMDA"); }}
+	{"tsend", [](paramType x) {send_message(x); }},
+	{"execute",[](paramType x) {send_msg(x, "CMDA"); }},
 };
 
 int main()
 {
 	client_handler = thread(connection_handler, ref(global_set), 1337, ref(listening_socket));
 	client_handler.detach();
-	int optVal;
-	int optLen = sizeof(int);
 	while (true) {
 		commandline();
 	}
@@ -266,39 +268,28 @@ void detach()
 	active = default_connection;
 }
 
-int recv_msg(string &output) {
+int recv_data(string &type_h, string &data_h) {
 	char type[5]; // 4 + 1('\0')
 	char size[9]; // 8 + 1('\0')
 	int alloc_size;
 	ZeroMemory(type, 5);
 	ZeroMemory(size, 9);
 	if (check_error(recv(active.active_socket, type, 4, 0))) {
-		string ss = type;
-		cout << endl << "Got type: (" << ss << ")" << endl;
-		if (ss == "RESP") {
-			if (check_error(recv(active.active_socket, size, 8, 0))) {
-				alloc_size = atoi(size);
-				cout << "Got size: (" << alloc_size << ")" << endl;
-				char *input = new char[alloc_size];
-				if (check_error(recv(active.active_socket, input, alloc_size, 0))) {
-					input[alloc_size] = '\0';
-					string output = input;
-					cout << "Got text: \"" << output << "\"" << endl << endl;
-				}
-				else {
-					return -1;
-				}
+		type_h = type;
+		if (check_error(recv(active.active_socket, size, 8, 0))) {
+			alloc_size = atoi(size);
+			char *input = new char[alloc_size];
+			if (check_error(recv(active.active_socket, input, alloc_size, 0))) {
+				input[alloc_size] = '\0';
+				data_h = input;
 			}
 			else {
-				return -2;
+				return -1;
 			}
 		}
 		else {
-			cout << "unknown type breaking" << endl;
+			return -2;
 		}
-	}
-	else {
-		cout << "could not recv" << endl;
 	}
 }
 
@@ -314,14 +305,70 @@ bool send_msg(string input, string header) {
 		return false;
 	}
 	else {
-		string outp;
-		recv_msg(outp);
 		return true;
 	}
 }
 
+void send_message(string message) {
+	send_msg(message, "TEXT");
+	string data, type;
+	recv_data(type, data);
+}
+
 void disconnect(string command) {
-	cout << "kms" << endl;
+	if (command == "-l") {
+		Connection subject;
+		if (!m_connect.empty()) {
+			subject = m_connect.back();
+			if (is_connection(subject)) {
+				closesocket(subject.active_socket);
+				m_connect.erase(m_connect.begin() + find_by_num(m_connect, subject.socket_number));
+				cout << "Disconnected Socket (" << subject.socket_number << ")" << endl;
+			}
+		}
+		else {
+			cout << "error: there is no active connections to the server" << endl;
+			return;
+		}
+
+	}
+	else if (is_unique(command)) {
+		Connection subject = find_struct(m_connect, command);
+		if (is_connection(subject)) {
+			closesocket(subject.active_socket);
+			m_connect.erase(m_connect.begin() + find_by_num(m_connect, subject.socket_number));
+			cout << "Disconnected (" << command << ")" << endl;
+		}
+		else {
+			return;
+		}
+	}
+	else if (is_socket_num(command)) {
+		int socket_number = stoi(command);
+		Connection subject = find_struct(m_connect, socket_number);
+		if (is_connection(subject)) {
+			closesocket(subject.active_socket);
+			m_connect.erase(m_connect.begin() + find_by_num(m_connect, subject.socket_number));
+			cout << "Disconnected Socket (" << command << ")" << endl;
+		}
+		else {
+			return;
+		}
+	}
+	else if (is_ip(command)) {
+		Connection subject = find_by_ip(m_connect, command);
+		if (is_connection(subject)) {
+			closesocket(subject.active_socket);
+			m_connect.erase(m_connect.begin() + find_by_num(m_connect, subject.socket_number));
+			cout << "Disconnected Socket (" << command << ")" << endl;
+		}
+		else {
+			return;
+		}
+	}
+	else {
+		cout << "syntax: disconnect [<unique_name>, <socket_id>, <ip>]" << endl;
+	}
 }
 
 void connect(string command) {
@@ -770,6 +817,24 @@ void cout_green(string prefix, string input) {
 	cout << " " << input << endl;
 }
 
+void auth(int socket_id) {
+	stringstream auth_token;
+	auth_token << "AUTH" << socket_id;
+	send_msg(auth_token.str(), "AUTH");
+	srand(socket_id);
+	string phrase = "CDLXXII";
+	int sum = 0;
+	for (auto i : phrase) { sum += ((i ^ socket_id) ^ rand()); }
+	string password = to_string(sum);
+	string type, data;
+	recv_data(type, data);
+	if (!(type == "CERT" && data == password)){
+		cout << endl << "Unauthorized Access Made by socket (" << socket_id << ")" << endl << prefix << " ~ $ ";
+		closesocket(active.active_socket);
+		m_connect.erase(m_connect.begin() + find_by_num(m_connect, active.socket_number));
+	}
+}
+
 void connection_handler(fd_set &connection_master, int port, SOCKET &listening) {
 	if (!check_error(WSAStartup(ver, &wsData))) {
 		cerr << "Can't Initialize winsock! Quitting" << endl;
@@ -793,6 +858,9 @@ void connection_handler(fd_set &connection_master, int port, SOCKET &listening) 
 
 	while (true)
 	{
+		timeval tv;
+		tv.tv_sec = 5;
+		tv.tv_usec = 1;
 		fd_set copy = connection_master;
 		auto socket_count = select(0, &copy, nullptr, nullptr, nullptr);
 		for (int i = 0; i < socket_count; i++)
@@ -826,8 +894,7 @@ void connection_handler(fd_set &connection_master, int port, SOCKET &listening) 
 				stringstream welcome_msg;
 				string welcome;
 				active = m_new_connection(client, client, unique_name, host);
-				welcome_msg << "Connected to Feedback Server With Socket ID:" << client; // << "\r\n"; this is for connecting with putty
-				send_msg(welcome_msg.str(), "SRTU");
+				auth(client);
 				active = default_connection;
 			}
 			else {
