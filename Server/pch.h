@@ -10,5 +10,17 @@
 #define PCH_H
 
 // TODO: add headers that you want to pre-compile here
-
+#include <iostream>
+#include <WS2tcpip.h>
+#include <string>
+#include <sstream>
+#include <functional>
+#include <map>
+#include <stdlib.h>
+#include <algorithm>
+#include <vector>
+#include <random>
+#include <time.h>
+#include <conio.h>
+#include <thread>
 #endif //PCH_H

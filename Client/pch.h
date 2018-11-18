@@ -22,7 +22,6 @@
 #include "memory-lib.h"
 #include <Psapi.h>
 #include "client-interface.h"
-#include "cmd-interface.h"
 #include <stdlib.h>
 
 #pragma comment(lib, "ws2_32.lib")

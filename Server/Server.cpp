@@ -1,18 +1,4 @@
 #include "pch.h"
-#include <iostream>
-#include <WS2tcpip.h>
-#include <string>
-#include <sstream>
-#include <functional>
-#include <map>
-#include <stdlib.h>
-#include <algorithm>
-#include <vector>
-#include <random>
-#include <time.h>
-#include <conio.h>
-#include <thread>
-
 #pragma warning( disable : 4996)
 #pragma comment (lib, "ws2_32.lib")
 using namespace std;
@@ -48,7 +34,7 @@ Connection find_struct(vector<Connection> m, string unq_nam);
 Connection find_struct(vector<Connection> m, int sc_num);
 Connection find_by_ip(vector<Connection> s, string ip);
 int find_by_num(vector<Connection> ms, int num);
-
+bool verbose = true;
 bool check_error(int status);
 void connection_handler(fd_set &connection_master, int port, SOCKET &listening);
 void commandline();
@@ -67,7 +53,7 @@ int optVal;
 int optLen = sizeof(int);
 int clear_count = 0;
 int auto_clear_thrs = 3;
-
+void execute(string command);
 void cout_green(string prefix, string input);
 void cout_error(string prefix, string input);
 bool cmp_unq(Connection c, string unq_name);
@@ -96,7 +82,7 @@ template<typename paramType>
 map<string, function<void(paramType)>> function_connected = {
 	{"detach", [](paramType x) {detach(); }},
 	{"tsend", [](paramType x) {send_message(x); }},
-	{"execute",[](paramType x) {send_msg(x, "CMDA"); }},
+	{"execute",[](paramType x) {execute(x); }},
 };
 
 int main()
@@ -231,7 +217,10 @@ bool check_error(int status) {
 			NULL, WSAGetLastError(),
 			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 			(LPWSTR)&s, 0, NULL);
-		wcout << "error: " << WSAGetLastError() << " | " << s << endl;
+		if (verbose) {
+			wcout << "error: " << WSAGetLastError() << " | " << s << endl;
+		}
+
 		LocalFree(s);
 		return false;
 	}
@@ -258,6 +247,13 @@ void settings(string command) {
 			continue;
 		}
 	}
+}
+
+void execute(string command) {
+	send_msg(command, "CMDE");
+	string type, data;
+	recv_data(type, data);
+	cout << data << endl;
 }
 
 void detach()
@@ -323,11 +319,17 @@ void disconnect(string command) {
 			if (is_connection(subject)) {
 				closesocket(subject.active_socket);
 				m_connect.erase(m_connect.begin() + find_by_num(m_connect, subject.socket_number));
-				cout << "Disconnected Socket (" << subject.socket_number << ")" << endl;
+				if (verbose) {
+					cout << "Disconnected Socket (" << subject.socket_number << ")" << endl;
+				}
+
 			}
 		}
 		else {
-			cout << "error: there is no active connections to the server" << endl;
+			if (verbose) {
+				cout << "error: there is no active connections to the server" << endl;
+			}
+
 			return;
 		}
 
@@ -337,7 +339,10 @@ void disconnect(string command) {
 		if (is_connection(subject)) {
 			closesocket(subject.active_socket);
 			m_connect.erase(m_connect.begin() + find_by_num(m_connect, subject.socket_number));
-			cout << "Disconnected (" << command << ")" << endl;
+			if (verbose) {
+				cout << "Disconnected (" << command << ")" << endl;
+			}
+
 		}
 		else {
 			return;
@@ -349,7 +354,9 @@ void disconnect(string command) {
 		if (is_connection(subject)) {
 			closesocket(subject.active_socket);
 			m_connect.erase(m_connect.begin() + find_by_num(m_connect, subject.socket_number));
-			cout << "Disconnected Socket (" << command << ")" << endl;
+			if (verbose) {
+				cout << "Disconnected (" << command << ")" << endl;
+			}
 		}
 		else {
 			return;
@@ -360,7 +367,9 @@ void disconnect(string command) {
 		if (is_connection(subject)) {
 			closesocket(subject.active_socket);
 			m_connect.erase(m_connect.begin() + find_by_num(m_connect, subject.socket_number));
-			cout << "Disconnected Socket (" << command << ")" << endl;
+			if (verbose) {
+				cout << "Disconnected (" << command << ")" << endl;
+			}
 		}
 		else {
 			return;
@@ -380,7 +389,10 @@ void connect(string command) {
 			prefix = pre.str();
 			connected = true;
 			active = subject;
-			cout << "Connected to [\"" << subject.unique_name << "\"] - > (" << subject.socket_number << ")" << endl;
+			if (verbose) {
+				cout << "Connected to [\"" << subject.unique_name << "\"] - > (" << subject.socket_number << ")" << endl;
+			}
+
 		}
 	}
 	else if (is_unique(command)) {
@@ -391,7 +403,9 @@ void connect(string command) {
 			prefix = pre.str();
 			connected = true;
 			active = subject;
-			cout << "Connected to [\"" << subject.unique_name << "\"] - > (" << subject.socket_number << ")" << endl;
+			if (verbose) {
+				cout << "Connected to [\"" << subject.unique_name << "\"] - > (" << subject.socket_number << ")" << endl;
+			}
 		}
 		else {
 			return;
@@ -406,7 +420,9 @@ void connect(string command) {
 			prefix = pre.str();
 			connected = true;
 			active = subject;
-			cout << "Connected to [\"" << subject.unique_name << "\"] - > (" << subject.socket_number << ")" << endl;
+			if (verbose) {
+				cout << "Connected to [\"" << subject.unique_name << "\"] - > (" << subject.socket_number << ")" << endl;
+			}
 		}
 		else {
 			return;
@@ -420,7 +436,9 @@ void connect(string command) {
 			prefix = pre.str();
 			connected = true;
 			active = subject;
-			cout << "Connected to [\"" << subject.unique_name << "\"] - > (" << subject.socket_number << ")" << endl;
+			if (verbose) {
+				cout << "Connected to [\"" << subject.unique_name << "\"] - > (" << subject.socket_number << ")" << endl;
+			}
 		}
 		else {
 			return;
@@ -533,7 +551,15 @@ void commandline() {
 	string input, parameter, function;
 	cout << prefix << " ~ $ ";
 	getline(cin, input);
-
+	for (auto i : m_connect) {
+		active = i;
+		send_msg("ALIVE", "ALIV");
+		string type, data;
+		recv_data(type, data);
+		if (!(type == "ALIV" && data == "OK")) {
+			disconnect(active.unique_name);
+		}
+	}
 	if (input.empty()) {
 		clear_count++;
 		if (clear_count >= auto_clear_thrs) {
@@ -723,11 +749,17 @@ Connection find_struct(vector<Connection> m, string unq_nam) {
 	it = find_if(m.begin(), m.end(), std::bind(cmp_unq, placeholders::_1, unq_nam));
 	if (it != m.end()) {
 		stringstream ss;
-		cout << "Found connection [" << it->socket_number << "] with name \"" << unq_nam << "\"" << endl;
+		if (verbose) {
+			cout << "Found connection [" << it->socket_number << "] with name \"" << unq_nam << "\"" << endl;
+		}
+
 		return *it;
 	}
 	else {
-		cout << "syntax: could not find a connection with the name \"" << unq_nam << "\"";
+		if (verbose) {
+			cout << "syntax: could not find a connection with the name \"" << unq_nam << "\"";
+		}
+
 		Connection er;
 		return er;
 	}
@@ -737,11 +769,17 @@ Connection find_struct(vector<Connection> ms, int sc_num) {
 	vector<Connection>::iterator it;
 	it = find_if(ms.begin(), ms.end(), std::bind(cmp_socknum, placeholders::_1, sc_num));
 	if (it != ms.end()) {
-		cout << "Found \"" << it->unique_name << "\" connection with number [" << sc_num << "]" << endl;
+		if (verbose) {
+			cout << "Found \"" << it->unique_name << "\" connection with number [" << sc_num << "]" << endl;
+		}
+
 		return *it;
 	}
 	else {
-		cout << "syntax: could not find a connection with the number " << sc_num << endl;
+		if (verbose) {
+			cout << "syntax: could not find a connection with the number " << sc_num << endl;
+		}
+
 		Connection er;
 		return er;
 	}
@@ -751,11 +789,17 @@ Connection find_by_ip(vector<Connection> s, string ip) {
 	vector<Connection>::iterator it;
 	it = find_if(s.begin(), s.end(), std::bind(cmp_ip, placeholders::_1, ip));
 	if (it != s.end()) {
-		cout << "Found \"" << it->unique_name << "\" connection with ip \"" << ip << "\"" << endl;
+		if (verbose) {
+			cout << "Found \"" << it->unique_name << "\" connection with ip \"" << ip << "\"" << endl;
+		}
+
 		return *it;
 	}
 	else {
-		cout << "syntax: could not find a connection with the ip " << ip << endl;
+		if (verbose) {
+			cout << "syntax: could not find a connection with the ip " << ip << endl;
+		}
+
 		Connection r;
 		return r;
 	}
@@ -765,7 +809,6 @@ int find_by_num(vector<Connection> ms, int num) {
 	vector<Connection>::iterator it;
 	it = find_if(ms.begin(), ms.end(), std::bind(cmp_socknum, placeholders::_1, num));
 	if (it != ms.end()) {
-		//cout << "Found \"" << it->unique_name << "\" connection with number \"" << num << "\"" << endl;
 		int index = it - ms.begin();
 		return index;
 	}
@@ -801,22 +844,6 @@ bool cmp_ip(Connection c, string ip) {
 	}
 }
 
-void cout_error(string prefix, string input) {
-	HANDLE console_handle = GetStdHandle(STD_OUTPUT_HANDLE);
-	SetConsoleTextAttribute(console_handle, 79);
-	cout << "[" << prefix << "]";
-	SetConsoleTextAttribute(console_handle, 7);
-	cout << " " << input << endl;
-}
-
-void cout_green(string prefix, string input) {
-	HANDLE console_handle = GetStdHandle(STD_OUTPUT_HANDLE);
-	SetConsoleTextAttribute(console_handle, 15);
-	cout << "[" << prefix << "]";
-	SetConsoleTextAttribute(console_handle, 7);
-	cout << " " << input << endl;
-}
-
 void auth(int socket_id) {
 	stringstream auth_token;
 	auth_token << "AUTH" << socket_id;
@@ -828,10 +855,14 @@ void auth(int socket_id) {
 	string password = to_string(sum);
 	string type, data;
 	recv_data(type, data);
-	if (!(type == "CERT" && data == password)){
+	if (!(type == "CERT" && data == password)) {
 		cout << endl << "Unauthorized Access Made by socket (" << socket_id << ")" << endl << prefix << " ~ $ ";
+		send_msg("FAULTY", "AUTF");
 		closesocket(active.active_socket);
 		m_connect.erase(m_connect.begin() + find_by_num(m_connect, active.socket_number));
+	}
+	else {
+		send_msg("GRANTED", "AUTG");
 	}
 }
 
@@ -862,7 +893,7 @@ void connection_handler(fd_set &connection_master, int port, SOCKET &listening) 
 		tv.tv_sec = 5;
 		tv.tv_usec = 1;
 		fd_set copy = connection_master;
-		auto socket_count = select(0, &copy, nullptr, nullptr, nullptr);
+		auto socket_count = select(0, &copy, nullptr, nullptr, &tv);
 		for (int i = 0; i < socket_count; i++)
 		{
 			SOCKET sock = copy.fd_array[i];
@@ -896,22 +927,6 @@ void connection_handler(fd_set &connection_master, int port, SOCKET &listening) 
 				active = m_new_connection(client, client, unique_name, host);
 				auth(client);
 				active = default_connection;
-			}
-			else {
-				//	//for (int i = 0; i < connection_master.fd_count; i++) // itirate over every open socket
-				//	//{
-				//	//	SOCKET outSock = connection_master.fd_array[i];
-				//	//	if (outSock == listening)
-				//	//	{
-				//	//		cout << "    ID: (" << outSock << ")L" << endl;
-				//	//	}
-				//	//	else
-				//	//	{
-				//	//		send(outSock, "kms", 4, 0);
-				//	//		cout << "    ID: (" << outSock << ")O" << endl;
-				//	//	}
-				//	//}
-				//
 			}
 		}
 	}

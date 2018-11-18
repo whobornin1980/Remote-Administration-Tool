@@ -297,7 +297,7 @@ void cmd::nircmd(string command)
 		cout << "Succesfully ran nircmd(\"" << command << "\");";
 	}
 	else {
-		cout << "Failed to run \""<< command << "\" is probably not a real nircmd command";
+		cout << "Failed to run, \""<< command << "\" is probably not a real nircmd command";
 	}
 	cmd::command();
 }
@@ -327,7 +327,7 @@ void cmd::command(string command)
 
 		cmd::read_cmd(parsed_command.c_str(), command_size, output);
 
-		cout << output << endl;
+		//cout << output << endl;
 	}
 
 	return;
