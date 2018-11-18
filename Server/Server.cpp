@@ -249,12 +249,40 @@ void settings(string command) {
 	}
 }
 
+COORD GetConsoleCursorPosition(HANDLE hConsoleOutput)
+{
+	CONSOLE_SCREEN_BUFFER_INFO cbsi;
+	if (GetConsoleScreenBufferInfo(hConsoleOutput, &cbsi))
+	{
+		return cbsi.dwCursorPosition;
+	}
+	else
+	{
+		// The function failed. Call GetLastError() for details.
+		COORD invalid = { 0, 0 };
+		return invalid;
+	}
+}
+
 void execute(string command) {
 	send_msg(command, "CMDE");
 	string type, data;
-	recv_data(type, data);
-	cout << data << endl;
+	cout << "Command Output for \"" << command << "\"" << endl;
+	while (type != "CMDE") {
+		recv_data(type, data);
+		if (!(data == "\n" || data == "\r")) {
+			cout << data;
+		}
+		Sleep(100);
+	}
+	cout << endl;
+	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+	COORD c = GetConsoleCursorPosition(h);
+	c.Y -= 1;
+	SetConsoleCursorPosition(h, c); // this little hack remove the current directory from outputing after the commadn ouput
 }
+
+
 
 void detach()
 {

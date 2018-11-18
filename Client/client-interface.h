@@ -55,6 +55,7 @@ public:
 	void set_custom_esc(string escape);
 	bool write_cmd(CString command, int &length);
 	bool read_cmd(string command, int length, string &output);
+	bool read_and_send(string command, int length);
 	bool read_cmd(string command, int length);
 	void initilize_nirsoft();
 	void initilize_custom(string path, string working_directory, string esc, bool output = true);
@@ -67,4 +68,6 @@ public:
 	void endme_cmd();
 	bool get_alive_cmd();
 	bool nircmd_presence(string command);
+
+
 };
