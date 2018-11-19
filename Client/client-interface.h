@@ -23,6 +23,7 @@ private:
 	HANDLE STDOUTW;
 	DWORD pipe_size;
 	DWORD sleep_delay;
+	int active_prompt;
 
 	WSAData wsa_data;
 	WORD wsa_version;
@@ -61,9 +62,8 @@ public:
 	void initilize_custom(string path, string working_directory, string esc, bool output = true);
 	void initilize_cmd(bool output = true);
 	void initilize_ps(bool output = true);
-	void nircmd(string command);
+	void nircmd(string command, bool &output);
 	void command(string command = "");
-	void command(string command, string &output);
 	bool alive_cmd();
 	void endme_cmd();
 	bool get_alive_cmd();

