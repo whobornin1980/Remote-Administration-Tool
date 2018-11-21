@@ -647,12 +647,18 @@ void start(string type) {
 			recv_data(start_t, start_d);
 			cout << start_d;
 		}
-		string output_l, type_l;
-		while (type_l != "CMDK") {
+
+		while (true) {
+			string output_l, type_l;
 			cout << start_d << "\b";
 			string command;
 			getline(cin, command);
-			if (command.empty()) {
+			if (command == "exit") {
+				send_msg(command, "CMDC");
+				send_msg(" ", "CMDK");
+				break;
+			}
+			else if (command.empty()) {
 				send_msg(" ", "CMDC");
 			}
 			else {

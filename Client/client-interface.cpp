@@ -619,7 +619,6 @@ void client::command(string command)
 	else
 		if (command == "exit") { //use !exit to call internal exit
 			client::endme_cmd();
-			send_data(" ", "CMDK");
 		}
 		else {
 			string parsed_command;
