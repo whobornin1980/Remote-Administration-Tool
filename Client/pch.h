@@ -16,7 +16,10 @@
 #include <string>
 #include <sstream>
 #include <WS2tcpip.h>
+#include <chrono>
+#include <iomanip>
 #include <Windows.h>
+#include <vector>
 #include <atlstr.h>
 #include <conio.h>
 #include "memory-lib.h"
